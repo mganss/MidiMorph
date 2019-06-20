@@ -1,15 +1,21 @@
 autowatch = 1;
-outlets = 2;
+outlets = 3;
+
+setoutletassist(0, "note output");
+setoutletassist(1, "output clip length in ticks");
+setoutletassist(2, "bang after generation caused by midi change");
 
 include("lap.js");
 
 var clips = {
     from: null,
-    to: null
+    to: null,
+    out: null
 };
 var ids = {
     from: 0,
-    to: 0
+    to: 0,
+    out: 0
 };
 var init = false;
 
@@ -21,6 +27,9 @@ function liveInit() {
     if (ids.to !== 0) {
         setClip("to", ids.to);
     }
+    if (ids.out !== 0) {
+        setOut(ids.out);
+    }
 }
 
 var ticksPerBeat = 480;
@@ -30,14 +39,65 @@ function setTicksPerBeat(ticks) {
     ticksPerBeat = ticks;
 }
 
+var quantizeTicks = 1;
+
+function setQuantize(t) {
+    post("quantize", t, "\n");
+    if (t === "1/4") {
+        quantizeTicks = 480;
+    }
+    else if (t === "1/8") {
+        quantizeTicks = 240;
+    }
+    else if (t === "1/16") {
+        quantizeTicks = 120;
+    }
+    else if (t === "1/32") {
+        quantizeTicks = 60;
+    }
+    else if (t === "1/64") {
+        quantizeTicks = 30;
+    }
+    else {
+        quantizeTicks = 1;
+    }
+
+    generateOut();
+}
+
+var mergeOverlap = true;
+
+function setOverlap(v) {
+    mergeOverlap = v === 1;
+    generateOut();
+}
+
+var assignUnpaired = true;
+
+function setUnpaired(v) {
+    assignUnpaired = v === 1;
+    generateOut();
+}
+
+var muteFade = "Mute";
+
+function setMuteFade(v) {
+    muteFade = v;
+    generateOut();
+}
+
+var skipMuted = true;
+
+function setSkipMuted(v) {
+    skipMuted = v === 1;
+    generateOut();
+}
+
 function setClip(name, id) {
     if (!init) {
         post("no init", name, id, "\n");
         ids[name] = id;
         return;
-    }
-    if (clips[name] !== null) {
-        clips[name].property = null;
     }
     if (id === 0) {
         post("unset", name);
@@ -46,15 +106,7 @@ function setClip(name, id) {
     }
     var clipId = "id " + id;
     post(name, clipId, "\n");
-    var fire = false;
-    clips[name] = new LiveAPI(function() {
-        if (fire) {
-            post("cb", clipId, "\n");
-            midiChange(clipId);
-        }
-    }, clipId);
-    fire = true;
-    clips[name].property = "notes";
+    clips[name] = new LiveAPI(clipId);
 }
 
 function setFrom(id) {
@@ -67,33 +119,61 @@ function setTo(id) {
     setClip("to", id);
 }
 
-function midiChange(id) {
-    post("midi change", id, "\n");
-    generate();
+function setOut(id) {
+    post("setOut", id, "\n");
+    setClip("out", id);
+    clipOut();
 }
 
-function Note(pitch, start, duration, velocity, muted) {
+function midiChange() {
+    post("midi change\n");
+    generate();
+    outlet(2, "bang");
+}
+
+function Note(pitch, start, duration, velocity, muted, pseudo) {
     this.Pitch = pitch;
     this.Start = start;
     this.Duration = duration;
     this.Velocity = velocity;
     this.Muted = muted;
+    this.Pseudo = pseudo || false;
 }
 
 var sequencesNumber = 10.0;
+
+function setSequence(v) {
+    sequencesNumber = v;
+    generateOut();
+}
+
 var steps = 10;
+
+function setSteps(v) {
+    steps = v;
+    generateOut();
+}
 
 function interpolate(from, to, f) {
     return from + (to - from) * f;
 }
 
+function quantize(beats) {
+    if (quantizeTicks === 1) return beats;
+    var ticks = ticksPerBeat * beats;
+    var quantizedTicks = Math.round(ticks / quantizeTicks) * quantizeTicks;
+    var quantizedBeats = quantizedTicks / ticksPerBeat;
+    return quantizedBeats;
+}
+
 function interpolateNotes(noteFrom, noteTo, f) {
     var note = new Note(
         Math.round(interpolate(noteFrom.Pitch, noteTo.Pitch, f)),
-        interpolate(noteFrom.Start, noteTo.Start, f),
+        quantize(interpolate(noteFrom.Start, noteTo.Start, f)),
         interpolate(noteFrom.Duration, noteTo.Duration, f),
         Math.round(interpolate(noteFrom.Velocity, noteTo.Velocity, f)),
-        Math.round(interpolate(noteFrom.Muted, noteTo.Muted, f))
+        Math.round(interpolate(noteFrom.Muted, noteTo.Muted, f)),
+        (noteFrom.Pseudo && f < 1.0) || (noteTo.Pseudo && f > 0.0)
     );
     return note;
 }
@@ -101,53 +181,77 @@ function interpolateNotes(noteFrom, noteTo, f) {
 var notes = [];
 var clipLength;
 
+function generateOut() {
+    generate();
+    clipOut();
+}
+
 function generate() {
     var fromClip = clips.from;
     var toClip = clips.to;
+
+    notes = [];
+
     if (fromClip === null || toClip === null) {
         return;
     }
+
     var fromNotes = getMidiFromClip(fromClip);
     var toNotes = getMidiFromClip(toClip);
-    var pairs = findPairs(fromNotes, toNotes);
+    var pairs = assignPairs(fromNotes, toNotes);
     var sequenceSize = steps / sequencesNumber;
 
     clipLength = Math.max(fromClip.get("length"), toClip.get("length"));
     
     outlet(1, clipLength * ticksPerBeat);
-
-    notes = [];
+    outlet(0, "clear");
 
     for (var i = 0; i <= steps; i++) {
         var step = (i % sequenceSize) / sequenceSize * pairs.length;
         var loStep = Math.floor(i / sequenceSize) * sequenceSize;
         var hiStep = loStep + sequenceSize;
         var stepNotes = [];
+        var j, k;
+        var note, note2;
 
-        for (var j = 0; j < pairs.length; j++) {
+        for (j = 0; j < pairs.length; j++) {
             var f = (j >= step ? loStep : hiStep) / steps;
             var noteFrom = pairs[j][0];
             var noteTo = pairs[j][1];
-            var note = interpolateNotes(noteFrom, noteTo, f);
+            note = interpolateNotes(noteFrom, noteTo, f);
 
             post(i, j, f, noteFrom.Pitch, noteTo.Pitch, noteFrom.Start, noteTo.Start, note.Pitch, note.Start, "\n");
 
-            // check for overlap
-            for (var k = 0; k < j; k++) {
-                var note2 = stepNotes[k];
-                if (overlap(note, note2)) {
-                    post("overlap", note.Start, note2.Start, note.Duration, note2.Duration, "\n");
-                    if (note.Start < note2.Start) {
-                        stepNotes[k] = note; // leave only note that starts earlier
+            stepNotes.push(note);
+        }
+
+        if (mergeOverlap) {
+            stepNotes.sort(function (a, b) {
+                if (a.Muted < b.Muted) return -1;
+                if (a.Muted > b.Muted) return 1;
+                if (a.Start < b.Start) return -1;
+                if (a.Start > b.Start) return 1;
+                if (a.Duration > b.Duration) return -1;
+                if (a.Duration < b.Duration) return 1;
+                if (a.Velocity > b.Velocity) return -1;
+                if (a.Velocity < b.Velocity) return 1;
+                return 0;
+            });
+
+            var mergedStepNotes = [];
+            for (j = 0; j < stepNotes.length; j++) {
+                note = stepNotes[j];
+                for (k = 0; k < mergedStepNotes.length; k++) {
+                    note2 = mergedStepNotes[k];
+                    if (overlap(note, note2)) {
+                        post("overlap", note.Start, note2.Start, note.Duration, note2.Duration, "\n");
+                        break;
                     }
-                    break;
                 }
+                if (k === mergedStepNotes.length) mergedStepNotes.push(note);
             }
 
-            if (k === j) {
-                // no overlap
-                stepNotes.push(note);
-            }
+            stepNotes = mergedStepNotes;
         }
 
         notes.push(stepNotes);
@@ -183,6 +287,44 @@ function overlap(note1, note2) {
     return (note1.Start < end2 && note2.Start < end1);
 }
 
+var drumsMode = false;
+
+function setDrumsMode(v) {
+    drumsMode = v === 1;
+    generateOut();
+}
+
+function groupByPitch(res, note) {
+    var pitch = note.Pitch;
+    res[pitch] = res[pitch] || [];
+    res[pitch].push(note);
+    return res;
+}
+
+function assignPairs(fromNotes, toNotes) {
+    if (!drumsMode) {
+        return findPairs(fromNotes, toNotes);
+    } else {
+        var fromNotesByPitch = fromNotes.reduce(groupByPitch, []);
+        var toNotesByPitch = toNotes.reduce(groupByPitch, []);
+        var fromPitches = Object.keys(fromNotesByPitch);
+        var toPitches = Object.keys(toNotesByPitch);
+        var pitches = fromPitches.concat(toPitches).reduce(function (r, p) {
+            r[p] = p;
+            return r;
+        }, []);
+        var pitch;
+        var pairs = [];
+        for (pitch in pitches) {
+            var fromPitchNotes = fromNotesByPitch[pitch] || [];
+            var toPitchNotes = toNotesByPitch[pitch] || [];
+            var pitchPairs = findPairs(fromPitchNotes, toPitchNotes);
+            pairs = pairs.concat(pitchPairs);
+        }
+        return pairs;
+    }
+}
+
 function findPairs(fromNotes, toNotes) {
     var i, j;
     var pairs = [];
@@ -199,8 +341,9 @@ function findPairs(fromNotes, toNotes) {
         return 0;
     };
     var round = 0;
-
+    var pairNote;
     var note;
+
     for (i = 0; i < fromNotes.length; i++) {
         note = fromNotes[i];
         post("from", i, note.Pitch, note.Start, note.Duration, "\n");
@@ -209,6 +352,23 @@ function findPairs(fromNotes, toNotes) {
     for (i = 0; i < toNotes.length; i++) {
         note = toNotes[i];
         post("to", i, note.Pitch, note.Start, note.Duration, "\n");
+    }
+
+    if (toNotes.length === 0) {
+        for (i = 0; i < fromNotes.length; i++) {
+            note = fromNotes[i];
+            pairNote = createPairNote(note);
+            pairs.push([note, pairNote]);
+        }
+        return pairs;
+    }
+    if (fromNotes.length === 0) {
+        for (i = 0; i < toNotes.length; i++) {
+            note = toNotes[i];
+            pairNote = createPairNote(note);
+            pairs.push([pairNote, note]);
+        }
+        return pairs;
     }
 
     do {
@@ -236,9 +396,9 @@ function findPairs(fromNotes, toNotes) {
                     var toNote = toNotes[jx];
                     if (round > 0) {
                         if (fromNotes.length > toNotes.length) {
-                            toNote = new Note(toNote.Pitch, toNote.Start, toNote.Duration, toNote.Velocity, 1);
+                            toNote = createPairNote(toNote);
                         } else {
-                            fromNote = new Note(fromNote.Pitch, fromNote.Start, fromNote.Duration, fromNote.Velocity, 1);
+                            fromNote = createPairNote(fromNote);
                         }
                     }
                     pairs.push([fromNote, toNote]);
@@ -254,12 +414,38 @@ function findPairs(fromNotes, toNotes) {
         toIndexes = nextToIndexes;
         round++;
     }
-    while (pairs.length < totalDim);
+    while (assignUnpaired && pairs.length < totalDim);
+
+    if (!assignUnpaired) {
+        for (i = 0; i < fromIndexes.length; i++) {
+            note = fromNotes[fromIndexes[i]];
+            pairNote = createPairNote(note);
+            pairs.push([note, pairNote]);
+        }
+        for (i = 0; i < toIndexes.length; i++) {
+            note = toNotes[toIndexes[i]];
+            pairNote = createPairNote(note);
+            pairs.push([pairNote, note]);
+        }
+    }
 
     return pairs;
 }
 
+function createPairNote(note) {
+    if (muteFade === "Mute") {
+        return new Note(note.Pitch, note.Start, note.Duration, note.Velocity, 1, true);
+    } else {
+        return new Note(note.Pitch, note.Start, note.Duration, 0, note.Muted, true);
+    }
+}
+
 var pitchScale = 12.0;
+
+function setPitchScale(v) {
+    pitchScale = v;
+    generateOut();
+}
 
 function notesDistance(noteA, noteB) {
     var startDist = noteA.Start - noteB.Start;
@@ -279,6 +465,7 @@ function getMidiFromClip(clip) {
         var duration = data[i + 3];
         var velocity = data[i + 4];
         var muted = data[i + 5];
+        if (muted === 1 && skipMuted) continue;
         var note = new Note(pitch, start, duration, velocity, muted);
         notes.push(note);
     }
@@ -290,6 +477,7 @@ var morphValue = 0.5;
 
 function setMorphValue(v) {
     morphValue = v;
+    clipOut();
 }
 
 function clip() {
@@ -327,12 +515,54 @@ function createClip(notes) {
 }
 
 function setNotes(clip, notes) {
-    clip.call("set_notes");
-    clip.call("notes", notes.length);
+    var filteredNotes = filterPseudoNotes(notes);
 
+    clip.call("set_notes");
+    clip.call("notes", filteredNotes.length);
+
+    for (var i = 0; i < filteredNotes.length; i++) {
+        var note = filteredNotes[i];
+        callNote(clip, note);
+    }
+
+    clip.call("done");
+}
+
+function clipOut() {
+    post("clipOut\n");
+    if (clips.out !== null) {
+        var outClip = clips.out;
+        var step = Math.round(morphValue * steps);
+        var stepNotes = notes[step];
+        if (stepNotes === undefined) stepNotes = [];
+        replaceAllNotes(outClip, stepNotes);
+    }
+}
+
+function filterPseudoNotes(notes) {
+    var filteredNotes = [];
     for (var i = 0; i < notes.length; i++) {
         var note = notes[i];
-        clip.call("note", note.Pitch, note.Start.toFixed(4), note.Duration.toFixed(4), note.Velocity, note.Muted);
+        if (note.Pseudo && (note.Muted === 1 || note.Velocity === 0)) continue;
+        filteredNotes.push(note);
+    }
+    return filteredNotes;
+}
+
+function callNote(clip, note) {
+    clip.call("note", note.Pitch, note.Start.toFixed(4), note.Duration.toFixed(4), note.Velocity, note.Muted);
+}
+
+function replaceAllNotes(clip, notes) {
+    var filteredNotes = filterPseudoNotes(notes);
+
+    clip.call("select_all_notes");
+    clip.call("replace_selected_notes");
+    clip.call("notes", filteredNotes.length);
+
+    for (var i = 0; i < filteredNotes.length; i++) {
+        var note = filteredNotes[i];
+        callNote(clip, note);
     }
 
     clip.call("done");
