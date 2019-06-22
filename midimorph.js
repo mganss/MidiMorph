@@ -35,14 +35,12 @@ function liveInit() {
 var ticksPerBeat = 480;
 
 function setTicksPerBeat(ticks) {
-    post("ticks per beat", ticks, "\n");
     ticksPerBeat = ticks;
 }
 
 var quantizeTicks = 1;
 
 function setQuantize(t) {
-    post("quantize", t, "\n");
     if (t === "1/4") {
         quantizeTicks = 480;
     }
@@ -95,38 +93,31 @@ function setSkipMuted(v) {
 
 function setClip(name, id) {
     if (!init) {
-        post("no init", name, id, "\n");
         ids[name] = id;
         return;
     }
     if (id === 0) {
-        post("unset", name);
         clips[name] = null;
         return;
     }
     var clipId = "id " + id;
-    post(name, clipId, "\n");
     clips[name] = new LiveAPI(clipId);
 }
 
 function setFrom(id) {
-    post("setFrom", id, "\n");
     setClip("from", id);
 }
 
 function setTo(id) {
-    post("setTo", id, "\n");
     setClip("to", id);
 }
 
 function setOut(id) {
-    post("setOut", id, "\n");
     setClip("out", id);
     clipOut();
 }
 
 function midiChange() {
-    post("midi change\n");
     generate();
     outlet(2, "bang");
 }
@@ -220,8 +211,6 @@ function generate() {
             var noteTo = pairs[j][1];
             note = interpolateNotes(noteFrom, noteTo, f);
 
-            post(i, j, f, noteFrom.Pitch, noteTo.Pitch, noteFrom.Start, noteTo.Start, note.Pitch, note.Start, "\n");
-
             stepNotes.push(note);
         }
 
@@ -244,7 +233,6 @@ function generate() {
                 for (k = 0; k < mergedStepNotes.length; k++) {
                     note2 = mergedStepNotes[k];
                     if (overlap(note, note2)) {
-                        post("overlap", note.Start, note2.Start, note.Duration, note2.Duration, "\n");
                         break;
                     }
                 }
@@ -260,6 +248,7 @@ function generate() {
 
         for (j = 0; j < stepNotes.length; j++) {
             var stepNote = stepNotes[j];
+            if (stepNote.Pseudo && (stepNote.Muted === 1 || stepNote.Velocity === 0)) continue;
             var ticks = Math.round(stepNote.Start * ticksPerBeat);
             var ix = (steps + 1) * ticks + i;
             var durationTicks = Math.round(stepNote.Duration * ticksPerBeat);
@@ -273,8 +262,6 @@ function generate() {
         }
 
         for (var oix in outLists) {
-            post("out", oix, typeof(oix), "\n");
-            post("outList", outLists[oix], "\n");
             outlet(0, "list", parseInt(oix), outLists[oix]);
         }
     }
@@ -344,16 +331,6 @@ function findPairs(fromNotes, toNotes) {
     var pairNote;
     var note;
 
-    for (i = 0; i < fromNotes.length; i++) {
-        note = fromNotes[i];
-        post("from", i, note.Pitch, note.Start, note.Duration, "\n");
-    }
-
-    for (i = 0; i < toNotes.length; i++) {
-        note = toNotes[i];
-        post("to", i, note.Pitch, note.Start, note.Duration, "\n");
-    }
-
     if (toNotes.length === 0) {
         for (i = 0; i < fromNotes.length; i++) {
             note = fromNotes[i];
@@ -391,7 +368,6 @@ function findPairs(fromNotes, toNotes) {
                 ix = fromIndexes[i];
                 if (j < toIndexes.length) {
                     jx = toIndexes[j];
-                    post("pair", ix, jx, "\n");
                     var fromNote = fromNotes[ix];
                     var toNote = toNotes[jx];
                     if (round > 0) {
@@ -460,11 +436,11 @@ function getMidiFromClip(clip) {
     var notes = [];
 
     for (var i = 2; i < (data.length - 1); i += 6) {
-        var pitch = data[i + 1];
-        var start = data[i + 2];
-        var duration = data[i + 3];
-        var velocity = data[i + 4];
-        var muted = data[i + 5];
+        var pitch = parseInt(data[i + 1]);
+        var start = parseFloat(data[i + 2]);
+        var duration = parseFloat(data[i + 3]);
+        var velocity = parseInt(data[i + 4]);
+        var muted = parseInt(data[i + 5]);
         if (muted === 1 && skipMuted) continue;
         var note = new Note(pitch, start, duration, velocity, muted);
         notes.push(note);
@@ -529,7 +505,6 @@ function setNotes(clip, notes) {
 }
 
 function clipOut() {
-    post("clipOut\n");
     if (clips.out !== null) {
         var outClip = clips.out;
         var step = Math.round(morphValue * steps);
