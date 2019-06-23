@@ -16,13 +16,13 @@ Source and destination clips are monitored for changes.
 Output:
 
 - Play directly from the device (if the <kbd>Play</kbd> toggle is on)
-- Click the <kbd>Clip</kbd> button to save current state selected by the Morph dial to a new clip
+- Click the <kbd>Clip</kbd> button to save the current state selected by the Morph dial to a new clip
 - Create a new clip, select it, then click the <kbd>Out</kbd> button to select permanent output to the newly created clip 
 (will be overwritten whenever a new Morph value is selected or parameters changed)
 
 ## Algorithm
 
-MidiMorph works by assigning pairs of notes from the source clips, 
+MidiMorph works by assigning pairs of notes from the source and destination clips, 
 then interpolating between the two notes of each pair to generate the intermediate notes.
 The pairs are assigned so that the sum of note distances is minimal,
 where distance is defined as the euclidean distance in the pitch/time-plane (like in the piano roll).
