@@ -82,4 +82,4 @@ only one note will be moved 1/10 of the distance at each step. The idea is to ge
 ## Pitch Scale
 
 The cost function used to assign note pairs calculates a distance in the pitch/time plane. 
-The Scale dial selects the number of semitones that are equal to one beat.
+The Scale dial selects the number of semitones that are equal in distance to one beat.
