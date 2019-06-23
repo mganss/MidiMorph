@@ -57,3 +57,24 @@ get paired with pseudo-notes that are silent versions of themselves. This means 
 Notes that remained unpaired after the first round of assignment will either fade out or get muted. You can choose either behavior from
 the Mute/Fade menu. In the fade case, the velocity will transition to zero and once it reaches zero, the note
 will be removed. When mute is selected, the note will stay at its original velocity up to half way, then get removed.
+
+## Skip Mute
+
+If the Skip Mute toggle is on, notes in either clip that are muted will be ignored. If it's off, muted notes will participate in the
+assignment and interpolation process. If they are paired with non-muted notes, the intermediate will be unmuted at half-way.
+
+## Overlap
+
+If intermediate notes overlap and the <kbd>Overlap</kbd> toggle is on, the overlapping notes are merged into one note which is identical
+to the one that starts earliest.
+
+## Drums
+
+If the <kbd>Drums</kbd> toggle is on, all notes that have the same pitch will be handled independently from those that have a different pitch, i.e. notes of one pitch will only be morphed into notes that have the same pitch.
+
+## Steps/Sequences
+
+The Steps dial selects the number of interpolation steps. The Sequences dial selects the number of "sequences" which can be thought of
+as sub-steps. Consider the case where you have 10 notes in both the source and destination clips and the number of steps is 100.
+If the number of sequences is 100 all notes will be moved 1/100 of the distance at each step. If the number of sequences is 10,
+only one note will be moved 1/10 of the distance at each step. The idea is to get more subtle changes at a single step in this way.
