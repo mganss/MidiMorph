@@ -44,7 +44,7 @@ This applies to the endpoints as well, i.e. output at 0.0 and 1.0 is quantized, 
 
 ## Unpaired Notes
 
-Using the <kbd>Assign</kbd> toggle you can select what happens to notes that remain unpaired after first assignment 
+Using the <kbd>Assign</kbd> toggle you can select what happens to notes that remain unpaired after the first assignment 
 pass as outlined above.
 If it's on, the remaining notes are assigned in additional assignment rounds using the same algorithm until all notes have been paired.
 
