@@ -16,8 +16,8 @@ Source and destination clips are monitored for changes.
 Output:
 
 - Play directly from the device (if the <kbd>Play</kbd> toggle is on)
-- Click the <kbd>Clip</kbd> button to save current state selected by Morph dial to new clip
-- Create new clip, select it, then click the <kbd>Out</kbd> button to select permanent output to the newly created clip 
+- Click the <kbd>Clip</kbd> button to save current state selected by the Morph dial to a new clip
+- Create a new clip, select it, then click the <kbd>Out</kbd> button to select permanent output to the newly created clip 
 (will be overwritten whenever a new Morph value is selected or parameters changed)
 
 ## Algorithm
