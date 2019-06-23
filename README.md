@@ -40,7 +40,7 @@ the other clip assigned to it.
 ## Quantization
 
 Selecting any of the values from the Quantize menu will quantize notes to the selected value. 
-This applies to the endpoints as well, i.e. output at 0.0 and 1.0 are quantized, too.
+This applies to the endpoints as well, i.e. output at 0.0 and 1.0 is quantized, too.
 
 ## Unpaired Notes
 
