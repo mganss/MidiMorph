@@ -78,3 +78,8 @@ The Steps dial selects the number of interpolation steps. The Sequences dial sel
 as sub-steps. Consider the case where you have 10 notes in both the source and destination clips and the number of steps is 100.
 If the number of sequences is 100 all notes will be moved 1/100 of the distance at each step. If the number of sequences is 10,
 only one note will be moved 1/10 of the distance at each step. The idea is to get more subtle changes at a single step in this way.
+
+## Pitch Scale
+
+The cost function used to assign note pairs calculates a distance in the pitch/time plane. 
+The Scale dial selects the number of semitones that are equal to one beat.
