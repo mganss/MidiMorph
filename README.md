@@ -32,10 +32,10 @@ solved here using the Jonker-Volgenant algorithm implemented in https://github.c
 Notes that remain unpaired (because the number of notes differ between the source and destination clips) can be 
 handled in one of two ways:
 
-1. They can paired
+1. They can be paired
 in additional assignment rounds, such that one note from the clip that has fewer notes then has multiple notes from 
 the other clip assigned to it.
-2. Remain unpaired and get faded or muted. Technically, they get paired with pseudo notes that are silent versions of themselves.
+2. They can remain unpaired and get faded or muted. Technically, they get paired with pseudo notes that are silent versions of themselves.
 
 ## Quantization
 
