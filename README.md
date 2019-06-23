@@ -61,7 +61,7 @@ will be removed. When mute is selected, the note will stay at its original veloc
 ## Skip Mute
 
 If the Skip Mute toggle is on, notes in either clip that are muted will be ignored. If it's off, muted notes will participate in the
-assignment and interpolation process. If they are paired with non-muted notes, the intermediate will be unmuted at half-way.
+assignment and interpolation process. If they are paired with non-muted notes, intermediate notes will be unmuted at half-way.
 
 ## Overlap
 
