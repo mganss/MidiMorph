@@ -4,6 +4,8 @@ MidiMorph is a Max for Live device that allows smooth interpolation between two 
 The output can be played directly from the device, saved to a new clip, or continuously updated to a destination clip.
 Source and destination clips are monitored for changes.
 
+![Demo](https://raw.githubusercontent.com/mganss/MidiMorph/master/demo.gif)
+
 ## Usage
 
 1. Drag the device into a MIDI track
