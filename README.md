@@ -102,4 +102,4 @@ The Scale dial selects the number of semitones that are equal in distance to one
 
 ## Technical Notes
 
-Whenever a parameter changes, all steps are precalculated. For immediate playback from the devices, all values are saved to a coll and playback is triggered by a metro with resolution of one tick.
+Whenever a parameter changes, all steps are precalculated. For immediate playback from the device, all values are saved to a `coll` and playback is triggered by a `metro` with resolution of one tick.
