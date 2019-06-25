@@ -89,8 +89,8 @@ only one note will be moved 1/10 of the distance at each step. The idea is to ge
 The images below show the same transition, both have steps set to 4, the first one has sequences set to 2, the second one has sequences
 set to 4.
 
-![2 Sequences](https://raw.githubusercontent.com/mganss/MidiMorph/master/seqs2.gif]
-![4 Sequences](https://raw.githubusercontent.com/mganss/MidiMorph/master/seqs4.gif]
+![2 Sequences](https://raw.githubusercontent.com/mganss/MidiMorph/master/seqs2.gif)
+![4 Sequences](https://raw.githubusercontent.com/mganss/MidiMorph/master/seqs4.gif)
 
 ## Pitch Scale
 
