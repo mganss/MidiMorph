@@ -4,6 +4,8 @@ MidiMorph is a Max for Live device that allows smooth interpolation between two 
 The output can be played directly from the device, saved to a new clip, or continuously updated to a destination clip.
 Source and destination clips are monitored for changes.
 
+![Demo](https://raw.githubusercontent.com/mganss/MidiMorph/master/demo.gif)
+
 ## Usage
 
 1. Drag the device into a MIDI track
@@ -52,6 +54,11 @@ If the <kbd>Assign</kbd> toggle is off, the remaining notes will not be assigned
 get paired with pseudo-notes that are silent versions of themselves. This means they will stay in place and fade out or get muted
 (depending on the Mute/Fade selection described below).
 
+The image below shows the transition between the same two clips as the demo at the top but with <kbd>Assign</kbd> enabled.
+The single note at the top right (F3) is now paired and converges to the note at the bottom right (A2).
+
+![Assign enabled](https://raw.githubusercontent.com/mganss/MidiMorph/master/assign.gif)
+
 ## Mute/Fade
 
 Notes that remained unpaired after the first round of assignment will either fade out or get muted. You can choose either behavior from
@@ -78,6 +85,12 @@ The Steps dial selects the number of interpolation steps. The Sequences dial sel
 as sub-steps. Consider the case where you have 10 notes in both the source and destination clips and the number of steps is 100.
 If the number of sequences is 100 all notes will be moved 1/100 of the distance at each step. If the number of sequences is 10,
 only one note will be moved 1/10 of the distance at each step. The idea is to get more subtle changes at a single step in this way.
+
+The images below show the same transition, both have steps set to 4, the first one has sequences set to 2, the second one has sequences
+set to 4.
+
+![2 Sequences](https://raw.githubusercontent.com/mganss/MidiMorph/master/seqs2.gif)
+![4 Sequences](https://raw.githubusercontent.com/mganss/MidiMorph/master/seqs4.gif)
 
 ## Pitch Scale
 
